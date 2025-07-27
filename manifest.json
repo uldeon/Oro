@@ -1,11 +1,11 @@
 {
-  "name": "Quest",
-  "short_name": "Quest",
-  "start_url": "https://arthur-lenoble.github.io/Quest",
+  "name": "Oro",
+  "short_name": "Oro",
+  "start_url": "https://uldeon.github.io/Oro",
   "display": "standalone",
-  "background_color": "#1e1e2f",
-  "theme_color": "#0d6efd",
-  "description": "Quest - Moteur de recherche sécurisé et respectueux de la vie privée.",
+  "background_color": "#000",
+  "theme_color": "#000",
+  "description": "L'assistant ia émotif gratuit et ultra-rapide.",
   "icons": [
     {
       "src": "favicon-quest.png",
