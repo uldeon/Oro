@@ -9,12 +9,12 @@
   "icons": [
     {
       "src": "oro.png",
-      "sizes": "192x192",
+      "sizes": "304x304",
       "type": "image/png"
     },
     {
       "src": "oro.png",
-      "sizes": "512x512",
+      "sizes": "304x304",
       "type": "image/png"
     }
   ]
