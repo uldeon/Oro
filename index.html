@@ -202,13 +202,96 @@
     }
 
     function addMessage(content, className, mood = "") {
-      const div = document.createElement("div");
-      div.className = `message ${className}`;
-      div.innerHTML = marked.parse(content);
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
-      hljs.highlightAll();
+  const div = document.createElement("div");
+  div.className = `message ${className}`;
 
+  // Analyse du contenu markdown avec code et langage (```lang)
+  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+  let lastIndex = 0;
+  const fragments = [];
+
+  // Extraire blocs de code et texte normal en fragments
+  while (true) {
+    const match = codeBlockRegex.exec(content);
+    if (!match) break;
+    if (match.index > lastIndex) {
+      fragments.push({ type: "text", content: content.slice(lastIndex, match.index) });
+    }
+    fragments.push({ type: "code", lang: match[1] || "", content: match[2] });
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < content.length) {
+    fragments.push({ type: "text", content: content.slice(lastIndex) });
+  }
+
+  // Fonction pour taper du texte avec effet fondu lettre par lettre
+  function typewriterFade(element, text, delay = 10, callback) {
+    let i = 0;
+    element.style.opacity = "0";
+    element.textContent = "";
+    element.style.transition = "opacity 0.3s ease";
+
+    function step() {
+      if (i <= text.length) {
+        element.textContent = text.slice(0, i);
+        element.style.opacity = "1";
+        i++;
+        setTimeout(step, delay);
+      } else {
+        if (callback) callback();
+      }
+    }
+    step();
+  }
+
+  // Fonction pour taper un bloc de code avec titre du langage en haut à gauche
+  function typeCodeBlock(container, lang, code, done) {
+    const wrapper = document.createElement("div");
+    wrapper.style.position = "relative";
+    wrapper.style.marginTop = "1rem";
+
+    const langLabel = document.createElement("div");
+    langLabel.textContent = lang.toUpperCase();
+    langLabel.style.position = "absolute";
+    langLabel.style.top = "4px";
+    langLabel.style.left = "8px";
+    langLabel.style.fontSize = "0.75rem";
+    langLabel.style.color = "var(--accent)";
+    langLabel.style.fontWeight = "bold";
+    langLabel.style.fontFamily = "monospace";
+    wrapper.appendChild(langLabel);
+
+    const pre = document.createElement("pre");
+    const codeEl = document.createElement("code");
+    codeEl.className = lang ? `language-${lang}` : "";
+    pre.appendChild(codeEl);
+    wrapper.appendChild(pre);
+    container.appendChild(wrapper);
+
+    let i = 0;
+    codeEl.style.opacity = "0";
+    codeEl.style.transition = "opacity 0.3s ease";
+
+    function step() {
+      if (i <= code.length) {
+        codeEl.textContent = code.slice(0, i);
+        codeEl.style.opacity = "1";
+        i++;
+        setTimeout(step, 10);
+      } else {
+        if (window.hljs) hljs.highlightElement(codeEl);
+        if (done) done();
+      }
+    }
+    step();
+  }
+
+  // On va taper chaque fragment (texte simple ou code) l’un après l’autre
+  let currentFragment = 0;
+
+  function processNext() {
+    if (currentFragment >= fragments.length) {
+      // Ajout mood à la fin si défini
       if (mood) {
         const moodEl = document.createElement("div");
         moodEl.className = "mood";
@@ -240,7 +323,27 @@
         div.appendChild(moodEl);
         requestAnimationFrame(() => moodEl.style.opacity = 1);
       }
+      chat.scrollTop = chat.scrollHeight;
+      return;
     }
+
+    const frag = fragments[currentFragment];
+    currentFragment++;
+
+    if (frag.type === "text") {
+      const span = document.createElement("span");
+      div.appendChild(span);
+      typewriterFade(span, frag.content, 10, processNext);
+    } else if (frag.type === "code") {
+      typeCodeBlock(div, frag.lang, frag.content, processNext);
+    }
+  }
+
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  processNext();
+    }
+    
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -258,7 +361,7 @@
           body: JSON.stringify({
             model: modelSelect.value,
             messages: [
-              { role: "system", content: "Tu es Oro, une IA empathique mais naturelle, avec des réponses équilibrées. Tu peux utiliser du markdown. Pour les zones de code, utilise ```lang\ncode``` comme délimiteurs." },
+              { role: "system", content: "Tu es Oro, une IA empathique mais naturelle, avec des réponses équilibrées, ni trop émotionnelles ni trop froides.  Quand tu fournis du code, encadre-le toujours avec des balises triple backticks (```) en précisant explicitement le langage juste après les backticks (exemple : ```python) puis saute une ligne.  L'affichage indiquera clairement le langage utilisé en petit au-dessus de la zone de code si tu respectes cette consigne.  Utilise le format Markdown pour le texte, sauf pour les parties en code.  Sois clair, précis et ne rédige pas de texte inutile autour du code." },
               ...conversationHistory
             ]
           })
