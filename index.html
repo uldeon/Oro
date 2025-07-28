@@ -5,6 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Oro</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
   <style>
     :root {
       --bg: #111;
@@ -71,7 +72,6 @@
       background-image: linear-gradient(145deg, rgba(255,255,255,0.02), rgba(0,0,0,0.1));
       border: 1px solid rgba(255,255,255,0.05);
       backdrop-filter: blur(2px);
-    }
     }
 
     .user {
@@ -147,6 +147,14 @@
       box-shadow: var(--shadow);
     }
 
+    pre code {
+      display: block;
+      padding: 1rem;
+      background: #1e1e1e;
+      border-radius: var(--radius);
+      overflow-x: auto;
+    }
+
     @keyframes slideInLeft {
       from { transform: translateX(-40px); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
@@ -168,9 +176,7 @@
     Oro
     <button class="theme-toggle" onclick="toggleTheme()">🌗</button>
   </header>
-
   <div id="chat"></div>
-
   <form id="chatForm">
     <input id="userInput" autocomplete="off" placeholder="Dis quelque chose..." />
     <select id="model">
@@ -180,12 +186,15 @@
     <button>Envoyer</button>
   </form>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+
   <script>
     const chat = document.getElementById("chat");
     const form = document.getElementById("chatForm");
     const input = document.getElementById("userInput");
     const modelSelect = document.getElementById("model");
-
     const conversationHistory = [];
 
     function toggleTheme() {
@@ -195,49 +204,42 @@
     function addMessage(content, className, mood = "") {
       const div = document.createElement("div");
       div.className = `message ${className}`;
-
-      let index = 0;
-      const typewriter = () => {
-        if (index <= content.length) {
-          div.textContent = content.slice(0, index);
-          index++;
-          setTimeout(typewriter, 10);
-        } else if (mood) {
-          const moodEl = document.createElement("div");
-          moodEl.className = "mood";
-          moodEl.textContent = mood;
-          const moodDot = document.createElement("span");
-          moodDot.style.display = "inline-block";
-          moodDot.style.width = "10px";
-          moodDot.style.height = "10px";
-          moodDot.style.borderRadius = "50%";
-          moodDot.style.marginRight = "8px";
-          moodDot.style.verticalAlign = "middle";
-
-          const moodColors = {
-            "Réfléchi": "#888",
-            "Enjoué": "#ffcc00",
-            "Empathique": "#00bfa6",
-            "Curieux": "#44aaff",
-            "Sérieux": "#cc3300",
-            "Ludique": "#ff66cc",
-            "Inquiet": "#ff4444",
-            "Détendu": "#66ff99",
-            "Neutre": "#aaa"
-          };
-          moodDot.style.backgroundColor = moodColors[mood] || "#aaa";
-
-          moodEl.prepend(moodDot);
-          moodEl.style.opacity = 0;
-          moodEl.style.transition = "opacity 0.6s ease";
-          div.appendChild(moodEl);
-          requestAnimationFrame(() => moodEl.style.opacity = 1);
-        }
-      };
-
+      div.innerHTML = marked.parse(content);
       chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
-      typewriter();
+      hljs.highlightAll();
+
+      if (mood) {
+        const moodEl = document.createElement("div");
+        moodEl.className = "mood";
+        moodEl.textContent = mood;
+        const moodDot = document.createElement("span");
+        moodDot.style.display = "inline-block";
+        moodDot.style.width = "10px";
+        moodDot.style.height = "10px";
+        moodDot.style.borderRadius = "50%";
+        moodDot.style.marginRight = "8px";
+        moodDot.style.verticalAlign = "middle";
+
+        const moodColors = {
+          "Réfléchi": "#888",
+          "Enjoué": "#ffcc00",
+          "Empathique": "#00bfa6",
+          "Curieux": "#44aaff",
+          "Sérieux": "#cc3300",
+          "Ludique": "#ff66cc",
+          "Inquiet": "#ff4444",
+          "Détendu": "#66ff99",
+          "Neutre": "#aaa"
+        };
+        moodDot.style.backgroundColor = moodColors[mood] || "#aaa";
+
+        moodEl.prepend(moodDot);
+        moodEl.style.opacity = 0;
+        moodEl.style.transition = "opacity 0.6s ease";
+        div.appendChild(moodEl);
+        requestAnimationFrame(() => moodEl.style.opacity = 1);
+      }
     }
 
     form.addEventListener("submit", async (e) => {
@@ -252,23 +254,19 @@
       try {
         const res = await fetch("https://text.pollinations.ai/" + modelSelect.value, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             model: modelSelect.value,
             messages: [
-              { role: "system", content: "Tu es Oro, une IA empathique mais naturelle, avec des réponses équilibrées, ni trop émotionnelles ni trop froides." },
+              { role: "system", content: "Tu es Oro, une IA empathique mais naturelle, avec des réponses équilibrées. Tu peux utiliser du markdown. Pour les zones de code, utilise ```lang\ncode``` comme délimiteurs." },
               ...conversationHistory
             ]
           })
         });
 
         if (!res.ok) throw new Error(`Erreur API : ${res.status}`);
-
         const data = await res.json();
         const botReply = data?.choices?.[0]?.message?.content || "Réponse vide.";
-
         const mood = detectMood(botReply);
         addMessage(botReply, "bot", `Humeur : ${mood}`);
         conversationHistory.push({ role: "assistant", content: botReply });
@@ -287,7 +285,7 @@
         { keyword: ["important", "essentiel", "nécessaire", "indispensable", "priorité"], label: "Sérieux" },
         { keyword: ["amusant", "drôle", "rigolo", "marrant"], label: "Ludique" },
         { keyword: ["effrayant", "dangereux", "inquiétant", "risqué"], label: "Inquiet" },
-        { keyword: ["cool", "relax", "tranquille", "zen"], label: "Détendu" },
+        { keyword: ["cool", "relax", "tranquille", "zen"], label: "Détendu" }
       ];
       for (const mood of moods) {
         if (mood.keyword.some(word => text.toLowerCase().includes(word))) return mood.label;
