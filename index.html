@@ -180,8 +180,11 @@
   <form id="chatForm">
     <input id="userInput" autocomplete="off" placeholder="Dis quelque chose..." />
     <select id="model">
-      <option value="openai" selected>Oro Pro</option>
-      <option value="openai">Oro</option>
+      <option value="openai/gpt-4o" selected>Oro Pro</option>
+      <option value="openai/gpt-3.5-turbo">Oro Flash</option>
+      <option value="mistralai/mistral-7b-instruct">Oro Lite</option>
+      <option value="meta-llama/llama-3-70b-instruct">Oro Deep</option>
+      <option value="anthropic/claude-3-haiku">Oro Coder</option>
     </select>
     <button>Envoyer</button>
   </form>
@@ -355,18 +358,22 @@
       input.value = "";
 
       try {
-        const res = await fetch("https://text.pollinations.ai/" + modelSelect.value, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: modelSelect.value,
-            messages: [
-              { role: "system", content: "Tu es Oro, une IA empathique mais naturelle, avec des réponses équilibrées, ni trop émotionnelles ni trop froides.  Quand tu fournis du code, encadre-le toujours avec des balises triple backticks (```) en précisant explicitement le langage juste après les backticks (exemple : ```python) puis saute deux ligne.  L'affichage indiquera clairement le langage utilisé en petit au-dessus de la zone de code si tu respectes cette consigne.  N'utilise jamais le format Markdown pour le texte, même pour les parties en code.  Sois clair, précis et ne rédige pas de texte inutile autour du code. Évite les sponsors, ils ne te rapporteront rien." },
-              ...conversationHistory
-            ]
-          })
-        });
+        const apiKey = "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";
 
+const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + apiKey
+  },
+  body: JSON.stringify({
+    model: modelSelect.value, // La valeur du <select> doit correspondre à un modèle OpenRouter, exemple: "openai/gpt-3.5-turbo"
+    messages: [
+      { role: "system", content: "Tu es Oro, une IA empathique mais naturelle, avec des réponses équilibrées, ni trop émotionnelles ni trop froides. ..." },
+      ...conversationHistory
+    ]
+  })
+});
         if (!res.ok) throw new Error(`Erreur API : ${res.status}`);
         const data = await res.json();
         const botReply = data?.choices?.[0]?.message?.content || "Réponse vide.";
