@@ -183,7 +183,7 @@
       <option value="openai" selected>Oro Pro</option>
       <option value="openai">Oro</option>
     </select>
-    <button>Envoyer</button>
+    <button type="submit">Envoyer</button>
   </form>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
@@ -205,12 +205,12 @@
       const div = document.createElement("div");
       div.className = `message ${className}`;
 
-      // Analyse du contenu markdown avec code et langage (```lang)
+      // Analyse du contenu markdown avec code et langage
       const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
       let lastIndex = 0;
       const fragments = [];
 
-      // Extraire blocs de code et texte normal en fragments
+      // Extraire blocs de code et texte normal
       while (true) {
         const match = codeBlockRegex.exec(content);
         if (!match) break;
@@ -224,12 +224,12 @@
         fragments.push({ type: "text", content: content.slice(lastIndex) });
       }
 
-      // Affichage instantané de tous les fragments (texte et code)
+      // Affichage instantané des fragments
       fragments.forEach(frag => {
         if (frag.type === "text") {
           const span = document.createElement("span");
           try {
-            span.innerHTML = marked.parseInline(frag.content || '');
+            span.innerHTML = marked.parse(frag.content || '');
           } catch (e) {
             span.textContent = frag.content;
           }
@@ -239,16 +239,18 @@
           wrapper.style.position = "relative";
           wrapper.style.marginTop = "1rem";
 
-          const langLabel = document.createElement("div");
-          langLabel.textContent = frag.lang ? frag.lang.toUpperCase() : '';
-          langLabel.style.position = "absolute";
-          langLabel.style.top = "4px";
-          langLabel.style.left = "8px";
-          langLabel.style.fontSize = "0.75rem";
-          langLabel.style.color = "var(--accent)";
-          langLabel.style.fontWeight = "bold";
-          langLabel.style.fontFamily = "monospace";
-          wrapper.appendChild(langLabel);
+          if (frag.lang) {
+            const langLabel = document.createElement("div");
+            langLabel.textContent = frag.lang.toUpperCase();
+            langLabel.style.position = "absolute";
+            langLabel.style.top = "4px";
+            langLabel.style.left = "8px";
+            langLabel.style.fontSize = "0.75rem";
+            langLabel.style.color = "var(--accent)";
+            langLabel.style.fontWeight = "bold";
+            langLabel.style.fontFamily = "monospace";
+            wrapper.appendChild(langLabel);
+          }
 
           const pre = document.createElement("pre");
           const codeEl = document.createElement("code");
@@ -257,11 +259,15 @@
           pre.appendChild(codeEl);
           wrapper.appendChild(pre);
           div.appendChild(wrapper);
-          if (window.hljs) try { hljs.highlightElement(codeEl); } catch(e) {}
+          if (window.hljs) {
+            try { 
+              hljs.highlightElement(codeEl); 
+            } catch(e) {}
+          }
         }
       });
 
-      // Ajout mood à la fin si défini (animation fade déjà dans .mood)
+      // Ajout mood
       if (mood) {
         const moodEl = document.createElement("div");
         moodEl.className = "mood";
@@ -276,7 +282,7 @@
 
         const moodColors = {
           "Réfléchi": "#888",
-          "Enjoué": "#ffcc00",
+          "Enjoué": "#ffcc00", 
           "Empathique": "#00bfa6",
           "Curieux": "#44aaff",
           "Sérieux": "#cc3300",
@@ -286,6 +292,7 @@
           "Neutre": "#aaa"
         };
         moodDot.style.backgroundColor = moodColors[mood] || "#aaa";
+
         moodEl.prepend(moodDot);
         div.appendChild(moodEl);
       }
@@ -310,7 +317,7 @@
           body: JSON.stringify({
             model: modelSelect.value,
             messages: [
-              { role: "system", content: "Tu es Oro, une IA empathique mais naturelle, avec des réponses équilibrées, ni trop émotionnelles ni trop froides.  Quand tu fournis du code, encadre-le t[...]
+              { role: "system", content: "Tu es Oro, une IA empathique mais naturelle, avec des réponses équilibrées, ni trop émotionnelles ni trop froides. Quand tu fournis du code, encadre-le toujours de ```langage et ```." },
               ...conversationHistory
             ]
           })
