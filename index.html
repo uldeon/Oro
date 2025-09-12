@@ -202,96 +202,66 @@
     }
 
     function addMessage(content, className, mood = "") {
-  const div = document.createElement("div");
-  div.className = `message ${className}`;
+      const div = document.createElement("div");
+      div.className = `message ${className}`;
 
-  // Analyse du contenu markdown avec code et langage (```lang)
-  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
-  let lastIndex = 0;
-  const fragments = [];
+      // Analyse du contenu markdown avec code et langage (```lang)
+      const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+      let lastIndex = 0;
+      const fragments = [];
 
-  // Extraire blocs de code et texte normal en fragments
-  while (true) {
-    const match = codeBlockRegex.exec(content);
-    if (!match) break;
-    if (match.index > lastIndex) {
-      fragments.push({ type: "text", content: content.slice(lastIndex, match.index) });
-    }
-    fragments.push({ type: "code", lang: match[1] || "", content: match[2] });
-    lastIndex = match.index + match[0].length;
-  }
-  if (lastIndex < content.length) {
-    fragments.push({ type: "text", content: content.slice(lastIndex) });
-  }
-
-  // Fonction pour taper du texte avec effet fondu lettre par lettre
-  function typewriterFade(element, text, delay = 10, callback) {
-    let i = 0;
-    element.style.opacity = "0";
-    element.textContent = "";
-    element.style.transition = "opacity 0.3s ease";
-
-    function step() {
-      if (i <= text.length) {
-        element.textContent = text.slice(0, i);
-        element.style.opacity = "1";
-        i++;
-        setTimeout(step, delay);
-      } else {
-        if (callback) callback();
+      // Extraire blocs de code et texte normal en fragments
+      while (true) {
+        const match = codeBlockRegex.exec(content);
+        if (!match) break;
+        if (match.index > lastIndex) {
+          fragments.push({ type: "text", content: content.slice(lastIndex, match.index) });
+        }
+        fragments.push({ type: "code", lang: match[1] || "", content: match[2] });
+        lastIndex = match.index + match[0].length;
       }
-    }
-    step();
-  }
-
-  // Fonction pour taper un bloc de code avec titre du langage en haut à gauche
-  function typeCodeBlock(container, lang, code, done) {
-    const wrapper = document.createElement("div");
-    wrapper.style.position = "relative";
-    wrapper.style.marginTop = "1rem";
-
-    const langLabel = document.createElement("div");
-    langLabel.textContent = lang.toUpperCase();
-    langLabel.style.position = "absolute";
-    langLabel.style.top = "4px";
-    langLabel.style.left = "8px";
-    langLabel.style.fontSize = "0.75rem";
-    langLabel.style.color = "var(--accent)";
-    langLabel.style.fontWeight = "bold";
-    langLabel.style.fontFamily = "monospace";
-    wrapper.appendChild(langLabel);
-
-    const pre = document.createElement("pre");
-    const codeEl = document.createElement("code");
-    codeEl.className = lang ? `language-${lang}` : "";
-    pre.appendChild(codeEl);
-    wrapper.appendChild(pre);
-    container.appendChild(wrapper);
-
-    let i = 0;
-    codeEl.style.opacity = "0";
-    codeEl.style.transition = "opacity 0.3s ease";
-
-    function step() {
-      if (i <= code.length) {
-        codeEl.textContent = code.slice(0, i);
-        codeEl.style.opacity = "1";
-        i++;
-        setTimeout(step, 10);
-      } else {
-        if (window.hljs) hljs.highlightElement(codeEl);
-        if (done) done();
+      if (lastIndex < content.length) {
+        fragments.push({ type: "text", content: content.slice(lastIndex) });
       }
-    }
-    step();
-  }
 
-  // On va taper chaque fragment (texte simple ou code) l’un après l’autre
-  let currentFragment = 0;
+      // Affichage instantané de tous les fragments (texte et code)
+      fragments.forEach(frag => {
+        if (frag.type === "text") {
+          const span = document.createElement("span");
+          try {
+            span.innerHTML = marked.parseInline(frag.content || '');
+          } catch (e) {
+            span.textContent = frag.content;
+          }
+          div.appendChild(span);
+        } else if (frag.type === "code") {
+          const wrapper = document.createElement("div");
+          wrapper.style.position = "relative";
+          wrapper.style.marginTop = "1rem";
 
-  function processNext() {
-    if (currentFragment >= fragments.length) {
-      // Ajout mood à la fin si défini
+          const langLabel = document.createElement("div");
+          langLabel.textContent = frag.lang ? frag.lang.toUpperCase() : '';
+          langLabel.style.position = "absolute";
+          langLabel.style.top = "4px";
+          langLabel.style.left = "8px";
+          langLabel.style.fontSize = "0.75rem";
+          langLabel.style.color = "var(--accent)";
+          langLabel.style.fontWeight = "bold";
+          langLabel.style.fontFamily = "monospace";
+          wrapper.appendChild(langLabel);
+
+          const pre = document.createElement("pre");
+          const codeEl = document.createElement("code");
+          codeEl.className = frag.lang ? `language-${frag.lang}` : "";
+          codeEl.textContent = frag.content;
+          pre.appendChild(codeEl);
+          wrapper.appendChild(pre);
+          div.appendChild(wrapper);
+          if (window.hljs) try { hljs.highlightElement(codeEl); } catch(e) {}
+        }
+      });
+
+      // Ajout mood à la fin si défini (animation fade déjà dans .mood)
       if (mood) {
         const moodEl = document.createElement("div");
         moodEl.className = "mood";
@@ -304,76 +274,25 @@
         moodDot.style.marginRight = "8px";
         moodDot.style.verticalAlign = "middle";
 
-// Affichage instantané de tous les fragments (texte et code)
-fragments.forEach(frag => {
-  if (frag.type === "text") {
-    const span = document.createElement("span");
-    // Si tu veux le markdown pour le texte (plus joli) :
-    try {
-      span.innerHTML = marked.parseInline(frag.content || '');
-    } catch (e) {
-      span.textContent = frag.content;
+        const moodColors = {
+          "Réfléchi": "#888",
+          "Enjoué": "#ffcc00",
+          "Empathique": "#00bfa6",
+          "Curieux": "#44aaff",
+          "Sérieux": "#cc3300",
+          "Ludique": "#ff66cc",
+          "Inquiet": "#ff4444",
+          "Détendu": "#66ff99",
+          "Neutre": "#aaa"
+        };
+        moodDot.style.backgroundColor = moodColors[mood] || "#aaa";
+        moodEl.prepend(moodDot);
+        div.appendChild(moodEl);
+      }
+
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
     }
-    div.appendChild(span);
-  } else if (frag.type === "code") {
-    const wrapper = document.createElement("div");
-    wrapper.style.position = "relative";
-    wrapper.style.marginTop = "1rem";
-
-    const langLabel = document.createElement("div");
-    langLabel.textContent = frag.lang ? frag.lang.toUpperCase() : '';
-    langLabel.style.position = "absolute";
-    langLabel.style.top = "4px";
-    langLabel.style.left = "8px";
-    langLabel.style.fontSize = "0.75rem";
-    langLabel.style.color = "var(--accent)";
-    langLabel.style.fontWeight = "bold";
-    langLabel.style.fontFamily = "monospace";
-    wrapper.appendChild(langLabel);
-
-    const pre = document.createElement("pre");
-    const codeEl = document.createElement("code");
-    codeEl.className = frag.lang ? `language-${frag.lang}` : "";
-    codeEl.textContent = frag.content;
-    pre.appendChild(codeEl);
-    wrapper.appendChild(pre);
-    div.appendChild(wrapper);
-    if (window.hljs) try { hljs.highlightElement(codeEl); } catch(e) {}
-  }
-});
-
-// Ajout mood à la fin si défini (animation fade déjà dans .mood)
-if (mood) {
-  const moodEl = document.createElement("div");
-  moodEl.className = "mood";
-  moodEl.textContent = mood;
-  const moodDot = document.createElement("span");
-  moodDot.style.display = "inline-block";
-  moodDot.style.width = "10px";
-  moodDot.style.height = "10px";
-  moodDot.style.borderRadius = "50%";
-  moodDot.style.marginRight = "8px";
-  moodDot.style.verticalAlign = "middle";
-
-  const moodColors = {
-    "Réfléchi": "#888",
-    "Enjoué": "#ffcc00",
-    "Empathique": "#00bfa6",
-    "Curieux": "#44aaff",
-    "Sérieux": "#cc3300",
-    "Ludique": "#ff66cc",
-    "Inquiet": "#ff4444",
-    "Détendu": "#66ff99",
-    "Neutre": "#aaa"
-  };
-  moodDot.style.backgroundColor = moodColors[mood] || "#aaa";
-  moodEl.prepend(moodDot);
-  div.appendChild(moodEl);
-}
-
-chat.appendChild(div);
-chat.scrollTop = chat.scrollHeight;
-    
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -391,7 +310,7 @@ chat.scrollTop = chat.scrollHeight;
           body: JSON.stringify({
             model: modelSelect.value,
             messages: [
-              { role: "system", content: "Tu es Oro, une IA empathique mais naturelle, avec des réponses équilibrées, ni trop émotionnelles ni trop froides.  Quand tu fournis du code, encadre-le toujours avec des balises triple backticks (```) en précisant explicitement le langage juste après les backticks (exemple : ```python) puis saute deux ligne.  L'affichage indiquera clairement le langage utilisé en petit au-dessus de la zone de code si tu respectes cette consigne.  N'utilise jamais le format Markdown pour le texte, même pour les parties en code.  Sois clair, précis et ne rédige pas de texte inutile autour du code. Évite les sponsors, ils ne te rapporteront rien." },
+              { role: "system", content: "Tu es Oro, une IA empathique mais naturelle, avec des réponses équilibrées, ni trop émotionnelles ni trop froides.  Quand tu fournis du code, encadre-le t[...]
               ...conversationHistory
             ]
           })
