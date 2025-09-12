@@ -304,45 +304,75 @@
         moodDot.style.marginRight = "8px";
         moodDot.style.verticalAlign = "middle";
 
-        const moodColors = {
-          "Réfléchi": "#888",
-          "Enjoué": "#ffcc00",
-          "Empathique": "#00bfa6",
-          "Curieux": "#44aaff",
-          "Sérieux": "#cc3300",
-          "Ludique": "#ff66cc",
-          "Inquiet": "#ff4444",
-          "Détendu": "#66ff99",
-          "Neutre": "#aaa"
-        };
-        moodDot.style.backgroundColor = moodColors[mood] || "#aaa";
-
-        moodEl.prepend(moodDot);
-        moodEl.style.opacity = 0;
-        moodEl.style.transition = "opacity 0.6s ease";
-        div.appendChild(moodEl);
-        requestAnimationFrame(() => moodEl.style.opacity = 1);
-      }
-      chat.scrollTop = chat.scrollHeight;
-      return;
+// Affichage instantané de tous les fragments (texte et code)
+fragments.forEach(frag => {
+  if (frag.type === "text") {
+    const span = document.createElement("span");
+    // Si tu veux le markdown pour le texte (plus joli) :
+    try {
+      span.innerHTML = marked.parseInline(frag.content || '');
+    } catch (e) {
+      span.textContent = frag.content;
     }
+    div.appendChild(span);
+  } else if (frag.type === "code") {
+    const wrapper = document.createElement("div");
+    wrapper.style.position = "relative";
+    wrapper.style.marginTop = "1rem";
 
-    const frag = fragments[currentFragment];
-    currentFragment++;
+    const langLabel = document.createElement("div");
+    langLabel.textContent = frag.lang ? frag.lang.toUpperCase() : '';
+    langLabel.style.position = "absolute";
+    langLabel.style.top = "4px";
+    langLabel.style.left = "8px";
+    langLabel.style.fontSize = "0.75rem";
+    langLabel.style.color = "var(--accent)";
+    langLabel.style.fontWeight = "bold";
+    langLabel.style.fontFamily = "monospace";
+    wrapper.appendChild(langLabel);
 
-    if (frag.type === "text") {
-      const span = document.createElement("span");
-      div.appendChild(span);
-      typewriterFade(span, frag.content, 10, processNext);
-    } else if (frag.type === "code") {
-      typeCodeBlock(div, frag.lang, frag.content, processNext);
-    }
+    const pre = document.createElement("pre");
+    const codeEl = document.createElement("code");
+    codeEl.className = frag.lang ? `language-${frag.lang}` : "";
+    codeEl.textContent = frag.content;
+    pre.appendChild(codeEl);
+    wrapper.appendChild(pre);
+    div.appendChild(wrapper);
+    if (window.hljs) try { hljs.highlightElement(codeEl); } catch(e) {}
   }
+});
 
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
-  processNext();
-    }
+// Ajout mood à la fin si défini (animation fade déjà dans .mood)
+if (mood) {
+  const moodEl = document.createElement("div");
+  moodEl.className = "mood";
+  moodEl.textContent = mood;
+  const moodDot = document.createElement("span");
+  moodDot.style.display = "inline-block";
+  moodDot.style.width = "10px";
+  moodDot.style.height = "10px";
+  moodDot.style.borderRadius = "50%";
+  moodDot.style.marginRight = "8px";
+  moodDot.style.verticalAlign = "middle";
+
+  const moodColors = {
+    "Réfléchi": "#888",
+    "Enjoué": "#ffcc00",
+    "Empathique": "#00bfa6",
+    "Curieux": "#44aaff",
+    "Sérieux": "#cc3300",
+    "Ludique": "#ff66cc",
+    "Inquiet": "#ff4444",
+    "Détendu": "#66ff99",
+    "Neutre": "#aaa"
+  };
+  moodDot.style.backgroundColor = moodColors[mood] || "#aaa";
+  moodEl.prepend(moodDot);
+  div.appendChild(moodEl);
+}
+
+chat.appendChild(div);
+chat.scrollTop = chat.scrollHeight;
     
 
     form.addEventListener("submit", async (e) => {
