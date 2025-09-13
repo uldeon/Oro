@@ -148,12 +148,52 @@
       box-shadow: var(--shadow);
     }
 
+    pre {
+      position: relative;
+      margin: 1rem 0;
+    }
+
     pre code {
       display: block;
       padding: 1rem;
       background: #1e1e1e;
       border-radius: var(--radius);
       overflow-x: auto;
+    }
+
+    .code-buttons {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 0.5rem;
+      z-index: 10;
+    }
+
+    .code-button {
+      padding: 4px 8px;
+      font-size: 0.8rem;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      opacity: 0.8;
+      transition: opacity 0.3s ease;
+    }
+
+    .code-button:hover {
+      opacity: 1;
+    }
+
+    #output {
+      padding: 1rem;
+      background: #1e1e1e;
+      color: #fff;
+      border-radius: var(--radius);
+      margin-top: 0.5rem;
+      white-space: pre-wrap;
+      display: none;
     }
 
     @keyframes slideInLeft {
@@ -169,6 +209,25 @@
     @keyframes floatIn {
       from { transform: scale(0.95) translateY(10px); opacity: 0; }
       to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    .copy-notification {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--accent);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius);
+      animation: fadeInOut 2s ease-in-out forwards;
+      z-index: 1000;
+    }
+
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translateY(20px); }
+      20% { opacity: 1; transform: translateY(0); }
+      80% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-20px); }
     }
   </style>
 </head>
@@ -200,6 +259,90 @@
 
     function toggleTheme() {
       document.body.classList.toggle('light');
+    }
+
+    function showNotification(message) {
+      const notification = document.createElement('div');
+      notification.className = 'copy-notification';
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 2000);
+    }
+
+    async function copyToClipboard(code) {
+      try {
+        await navigator.clipboard.writeText(code);
+        showNotification('Code copié !');
+      } catch (err) {
+        showNotification('Erreur lors de la copie');
+      }
+    }
+
+    function createCodeButtons(wrapper, code, language) {
+      const buttonsDiv = document.createElement('div');
+      buttonsDiv.className = 'code-buttons';
+
+      // Bouton Copy
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'code-button';
+      copyBtn.textContent = 'Copy';
+      copyBtn.onclick = () => copyToClipboard(code);
+
+      // Bouton Run
+      const runBtn = document.createElement('button');
+      runBtn.className = 'code-button';
+      runBtn.textContent = 'Run';
+      runBtn.onclick = () => executeCode(code, language, wrapper);
+
+      buttonsDiv.appendChild(copyBtn);
+      buttonsDiv.appendChild(runBtn);
+      wrapper.appendChild(buttonsDiv);
+    }
+
+    function executeCode(code, language, wrapper) {
+      let output = wrapper.querySelector('.output');
+      if (!output) {
+        output = document.createElement('div');
+        output.className = 'output';
+        output.id = 'output';
+        wrapper.appendChild(output);
+      }
+      output.style.display = 'block';
+
+      try {
+        switch(language.toLowerCase()) {
+          case 'javascript':
+          case 'js':
+            try {
+              const result = new Function(code)();
+              output.textContent = result !== undefined ? String(result) : 'Code exécuté avec succès';
+            } catch (error) {
+              output.textContent = `Erreur: ${error.message}`;
+            }
+            break;
+          case 'html':
+            try {
+              output.innerHTML = code;
+            } catch (error) {
+              output.textContent = `Erreur: ${error.message}`;
+            }
+            break;
+          case 'css':
+            try {
+              const style = document.createElement('style');
+              style.textContent = code;
+              document.head.appendChild(style);
+              output.textContent = 'Styles appliqués avec succès';
+            } catch (error) {
+              output.textContent = `Erreur: ${error.message}`;
+            }
+            break;
+          default:
+            output.textContent = `L'exécution du code ${language} n'est pas prise en charge`;
+        }
+      } catch (error) {
+        output.textContent = `Erreur d'exécution: ${error.message}`;
+      }
     }
 
     function addMessage(content, className, mood = "") {
@@ -259,6 +402,10 @@
           codeEl.textContent = frag.content;
           pre.appendChild(codeEl);
           wrapper.appendChild(pre);
+
+          // Ajout des boutons Copy et Run
+          createCodeButtons(wrapper, frag.content, frag.lang);
+
           div.appendChild(wrapper);
           if (window.hljs) {
             try { 
